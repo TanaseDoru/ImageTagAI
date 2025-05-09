@@ -66,7 +66,6 @@ async def upload_image(file: UploadFile = File(...)):
     # Stocare metadate în Azure SQL
     try:
         # DEBUG: string de conexiune SQL
-        print(f"[DEBUG] Connecting to database with: {SQL_CONN}")
         conn = pyodbc.connect(SQL_CONN)
         cursor = conn.cursor()
         now = datetime.datetime.utcnow()
@@ -83,7 +82,7 @@ async def upload_image(file: UploadFile = File(...)):
         print(f"[DEBUG] Database error: {e}")
         raise Exception(f"Database error: {e}")
 
-    return {"fileName": unique_filename, "tags": tags}
+    return {"url": blob_url, "tags": tags}
 
 @app.get("/history")
 async def get_history():

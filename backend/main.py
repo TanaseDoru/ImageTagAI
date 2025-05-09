@@ -6,6 +6,7 @@ from azure.ai.vision.imageanalysis.models import VisualFeatures
 from azure.core.credentials import AzureKeyCredential
 import pyodbc
 import os
+import json
 import uuid
 import datetime
 from dotenv import load_dotenv
@@ -59,9 +60,15 @@ async def upload_image(file: UploadFile = File(...)):
     # DEBUG: conținut raw al rezultatului
     print(f"[DEBUG] Raw analysis_result: {analysis_result!r}")
 
-    tags = analysis_result.tags  # tags este deja List[str]
+    tag_values = analysis_result.tags["values"]  # accesează lista de dict-uri
+    tags_extracted = [
+        {"name": tag["name"], "confidence": tag["confidence"]}
+        for tag in tag_values
+    ]
+
+    # tags = analysis_result.tags  # tags este deja List[str]
     # DEBUG: lista finală de tag-uri
-    print(f"[DEBUG] Extracted tags: {tags!r}")
+    print(f"[DEBUG] Extracted tags: {tags_extracted}")
 
     # Stocare metadate în Azure SQL
     try:
@@ -71,8 +78,10 @@ async def upload_image(file: UploadFile = File(...)):
         now = datetime.datetime.utcnow()
         cursor.execute(
             "INSERT INTO images (file_name, blob_url, uploaded_at, tags) VALUES (?, ?, ?, ?)",
-            (unique_filename, blob_url, now, ",".join(tags))
+            (unique_filename, blob_url, now, json.dumps(tags_extracted))
         )
+
+
         conn.commit()
         conn.close()
         # DEBUG: inserare reușită
@@ -82,7 +91,8 @@ async def upload_image(file: UploadFile = File(...)):
         print(f"[DEBUG] Database error: {e}")
         raise Exception(f"Database error: {e}")
 
-    return {"url": blob_url, "tags": tags}
+    return {"url": blob_url, "tags": tags_extracted}
+
 
 @app.get("/history")
 async def get_history():
@@ -96,7 +106,7 @@ async def get_history():
                 "fileName": row[0],
                 "url": row[1],
                 "uploadedAt": row[2].isoformat(),
-                "tags": row[3].split(",") if row[3] else []
+                "tags": json.loads(row[3]) if row[3] else []
             }
             for row in rows
         ]
@@ -105,3 +115,4 @@ async def get_history():
     except pyodbc.Error as e:
         print(f"[DEBUG] Database error on history: {e}")
         raise Exception(f"Database error: {e}")
+
