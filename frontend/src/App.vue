@@ -64,7 +64,7 @@ export default {
 
       const form = new FormData();
       form.append('file', this.file);
-      const api = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const api = `${window.location.protocol}//${window.location.hostname}:70/api`;
 
       try {
         const { data } = await axios.post(`${api}/upload`, form);
@@ -76,8 +76,9 @@ export default {
       }
     },
     async fetchHistory() {
-      const api = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const api = `${window.location.protocol}//${window.location.hostname}:70/api`;
       try {
+        console.log('Fetching history from:', `${api}/history`);
         const { data } = await axios.get(`${api}/history`);
         this.history = data;
         this.showHistory = true;
